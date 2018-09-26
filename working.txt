@@ -1,0 +1,511 @@
+import React , {Component}from 'react';
+import { StyleSheet,ScrollView, TouchableHighlight,TouchableOpacity,ActivityIndicator,Text,Image, View ,Dimensions,Button} from 'react-native';
+import constant from '../Constants/Constants';
+import VideoPlayer from 'react-native-video-player';
+import ScalableImage from 'react-native-scalable-image';
+import { Video } from 'expo';
+import { MaterialIcons, Octicons } from '@expo/vector-icons';
+import moment from 'moment';
+import QRCode from 'react-native-qrcode';
+const API_DATA=require('./data.json');
+var _ = require('lodash');
+const timer = require('react-native-timer');
+const callTest=true;
+const DATA_URL='https://9b6a8803-99a7-46bb-8e3c-e5aff212aa47.mock.pstmn.io/info';
+
+export default class HomePage extends Component {
+
+constructor(props) {
+        super(props);
+        this.state = {
+            isLoading: true,
+            selectedIndex:0,
+            mute: true,
+            shouldPlay: true,
+            displayType:'image',
+            displayTime:'',
+            tablet_id:'123',
+            secondTimeCall:false,
+            api_url:'https://api.myjson.com/bins/1g9qw7',
+        };
+}
+
+getCurrentImageIndex(dataArray){
+
+     console.log('getCurrentImageIndex()');
+
+      var perpetual=this.state.apiData[this.state.selectedIndex].perpetual?
+      this.state.apiData[this.state.selectedIndex].perpetual
+      :0;
+
+      let enteredloop=false;
+      var currrentTime=  this.getCurrentTime();
+      let currentTimeImageIndex=this.state.selectedIndex;
+    
+      dataArray.forEach(function(obj,index){
+        var objStart=moment.utc(obj.start_datetime);
+        var objEnd= moment.utc(obj.end_datetime);
+        
+        console.log('index',index,': startTime:',objStart,'endTime',objEnd);
+        console.log('currentTime',currrentTime);
+        if(moment(currrentTime).isSame(objStart) || moment(currrentTime).isBetween(objStart,objEnd))
+        {
+          console.log('index matched is:',index);
+          currentTimeImageIndex=index;
+          enteredloop=true;
+          
+        }
+      });
+
+      if(!enteredloop){
+          
+        if(perpetual===1){
+          currentTimeImageIndex=this.state.selectedIndex;
+        }else{
+          currentTimeImageIndex=0;
+        }
+
+      }
+        return currentTimeImageIndex;
+}
+calculateImageInterval(){
+     var fromDate = moment.utc(this.state.apiData[this.state.selectedIndex].start_datetime);
+     var toDate = moment.utc(this.state.apiData[this.state.selectedIndex].end_datetime);
+
+     var updatedInterval=toDate.diff(fromDate);
+     return updatedInterval;
+}
+updateSelectedIndex(){
+
+      let interval;
+
+      if(!_.isEmpty(this.state.apiData)){
+      
+          let currentTimeImageIndex=this.getCurrentImageIndex(this.state.apiData);
+
+            console.log("currentTimeImageIndex",currentTimeImageIndex);
+            console.log("index before set:",this.state.selectedIndex);
+
+
+            this.setState({
+              isLoading: false,
+              selectedIndex:currentTimeImageIndex,
+            }, function(){
+                var interval=this.calculateImageInterval();
+                console.log('interval:',interval);
+        
+                console.log("index after set:",this.state.selectedIndex);
+                timer.clearInterval('first');
+                timer.setInterval('first', this.updateSelectedIndex.bind(this), interval);
+            });
+      }
+}
+
+fetchApiData(){
+  console.log('calling fetchApiData');
+
+  let currentDate=this.getCurrentTime().format('YYYY-MM-DD');
+  let fromDate=currentDate+' 00:00:00';
+  let toDate=currentDate+' 23:59:59';
+  
+  //     return fetch(DATA_URL+'?tablet_id='+this.state.tablet_id+'&from_date='+fromDate+'&to_date='+toDate+'&tablet_orientation='+orientation)
+  //return fetch(`${constant.TEST_URL}`)
+  return fetch(this.state.api_url)  
+  .then((response) => response.json())
+      .then((responseJson) => {
+
+        if(responseJson.error)
+        {
+            console.log('res err: ', responseJson);
+        }
+        else {
+            var firstArray,secondArray,combinedArray;
+            firstArray=responseJson.slideshow.images;
+            secondArray=responseJson.slideshow.videos;
+  
+          
+            firstArray.forEach(function(obj) {
+                obj.type = "image";
+            });
+            
+            
+            secondArray.forEach(function(obj) {
+              obj.type = "video";
+            });
+
+            var currrentTime=  this.getCurrentTime();
+            _.remove(firstArray, function(obj) {
+                var objStart=moment.utc(obj.start_datetime);
+                var objEnd= moment.utc(obj.end_datetime);
+  
+                if(moment(currrentTime).isAfter(objStart) && !moment(currrentTime).isBetween(objStart,objEnd))
+                    {
+                      return obj;
+                    }
+            });
+  
+              _.remove(secondArray, function(obj) {
+                var objStart = moment.utc(obj.start_datetime);
+                var objEnd= moment.utc(obj.end_datetime);
+  
+                  if(moment(currrentTime).isAfter(objStart)  && !moment(currrentTime).isBetween(objStart,objEnd))
+                  {
+                    return obj;
+                  }
+            });
+  
+                combinedArray=firstArray.concat(secondArray);
+  
+                var sortedCombinedArray = _.orderBy(combinedArray, [combinedArray => new moment(combinedArray.start_datetime)]);
+                this.setState({
+                  myData:responseJson.info,
+                  apiData:sortedCombinedArray,
+                }, function(){
+  
+                  console.log('apiData:',this.state.apiData);
+                  if(this.state.apiData){
+                    console.log('apidata is not empty!');
+                      this.updateSelectedIndex();
+                  }
+                  })
+                  .catch((error) =>{
+                    console.error(error);
+                    });
+                    
+                    
+                    this.timer = setInterval(()=> this.fetchApiData(), 20000);
+                       
+              }
+      
+            })
+ }
+
+
+
+
+componentDidMount(){
+    this.fetchApiData();
+
+    //timer.setInterval('clockTime', this.calculateClockTime.bind(this), 1000);
+}
+
+
+  getCurrentTime(){
+    var currrentTime=  moment().utc().subtract(3, 'hours');
+   // let currrentTime= "2018-04-05T07:25:26.126Z";
+
+    return currrentTime;
+  }
+  calculateClockTime(){
+    this.setState({
+      displayTime: moment().utc().subtract(3, 'hours').format('MMMM Do YYYY, h:mm:ss a'),
+    });
+  }
+  handlePlayAndPause = () => {
+    this.setState((prevState) => ({
+      shouldPlay: !prevState.shouldPlay
+    }));
+  }
+  handleVolume = () => {
+    this.setState(prevState => ({
+      mute: !prevState.mute,
+    }));
+  }
+  handleLikeButtonClick(){
+    var currrentTime=  this.getCurrentTime();
+
+    fetch(`${constant.IMAGECLICK_URL}`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tablet_id: this.state.myData.tablet_id,
+        image_id: this.state.currentImageId,
+        currentTime:currrentTime,
+      }),
+    }).then((response) => response.json())
+        .then((responseJson) => {
+          console.log(responseJson);
+          console.log('done request successfully ');
+          //return responseJson.movies;
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+  }
+  setOriginal(){
+      return   {
+        height:this.props.heighLayout,
+        width:this.props.widthLayout,
+        resizeMode:'contain',
+      };
+
+  }
+  setStreched(){
+    return   {
+      height:Dimensions.get('window').height,
+      width:Dimensions.get('window').width,
+      resizeMode:'stretch',
+    };
+  }
+  getAlignTopLeft(){
+    return   { flex:1 ,alignSelf:'flex-start',justifyContent:'flex-start'};
+  }
+  getAlignBottomLeft(){
+    return   { flex:1 ,alignSelf:'flex-start',justifyContent:'flex-end'};
+  }
+  getAlignCenterLeft(){
+    return   { flex:1 ,alignSelf:'flex-start',justifyContent:'center'};
+  }
+  getAlignTopRight(){
+    return   { flex:1 ,alignSelf:'flex-end',justifyContent:'flex-start'};
+  }
+  getAlignBottomRight(){
+    return   { flex:1 ,alignSelf:'flex-end',justifyContent:'flex-end'};
+  }
+  getAlignCenterRight(){
+    return   { flex:1 ,alignSelf:'flex-end',justifyContent:'center'};
+  }
+  getAlignTopCenter(){
+    return   { flex:1 ,alignSelf:'center',justifyContent:'flex-start'};
+  }
+  getAlignBottomCenter(){
+    return   { flex:1 ,alignSelf:'center',justifyContent:'flex-end'};
+  }
+  getAlignCenter(){
+    return   { flex:1 ,alignSelf:'center',justifyContent:'center'};
+  }
+  getContainerAlignment(){
+
+      var horizontal_align=this.state.apiData[this.state.selectedIndex].align_horizontal?
+          this.state.apiData[this.state.selectedIndex].align_horizontal
+          : 'center';
+
+      var vertical_align=this.state.apiData[this.state.selectedIndex].align_vertical?
+          this.state.apiData[this.state.selectedIndex].align_vertical
+        :'center';
+
+        if(vertical_align==='up'){
+          vertical_align='top';
+        }
+
+          if(horizontal_align==='left' && vertical_align==='top'){
+              return this.getAlignTopLeft();
+          }
+          else if(horizontal_align==='left' && vertical_align==='bottom'){
+            return this.getAlignBottomLeft();
+          }else if(horizontal_align==='left' && vertical_align==='center'){
+              return this.getAlignCenterLeft();
+          }else if(horizontal_align==='right' && vertical_align==='top' ){
+                return this.getAlignTopRight();
+          }else if(horizontal_align==='right' && vertical_align==='bottom'){
+              return this.getAlignBottomRight();
+          }else if(horizontal_align==='right' && vertical_align==='center' ){
+              return this.getAlignCenterRight();
+            }else if(horizontal_align==='center' && vertical_align==='top' ){
+              return this.getAlignTopCenter();
+          }else if(horizontal_align==='center' && vertical_align==='bottom' ){
+              return this.getAlignBottomCenter();
+          }else{
+              return this.getAlignCenter();
+          }
+}
+  setImageOrientetion(){
+
+    var horizontal=this.state.apiData[this.state.selectedIndex].horizontal?
+        this.state.apiData[this.state.selectedIndex].horizontal
+        : 'best_adjust';
+
+    var vertical=this.state.apiData[this.state.selectedIndex].vertical?
+        this.state.apiData[this.state.selectedIndex].vertical
+      :'best_adjust';
+
+
+      if(this.props.orientationStatus==='Portrait'){
+        if(vertical==='original'){
+          return this.setOriginal();
+        }else{
+          return this.setStreched();
+        }
+    }
+    else{
+        if(horizontal==='original'){
+          return this.setOriginal();
+        }else{
+          return this.setStreched();
+        }
+    }
+  }
+  getImageStyles(){
+
+      return {
+            maxWidth: Number(this.props.widthLayout),
+            maxHeight:Number(this.props.heighLayout),
+            ...this.setImageOrientetion(),
+          }
+  }
+  getcontainerStyles(){
+
+      return {
+        ...this.getContainerAlignment(),
+      };
+  }
+
+render() {
+
+    if(this.state.isLoading){
+        return(
+            <View style={{flex:1,
+                          backgroundColor:'black',
+                          height:Number(this.props.heightLayout),
+                          width:Number(this.props.widthLayout),
+                          alignItems: 'center',
+                          justifyContent: 'center', }}>
+
+                    <ActivityIndicator
+                        animating={ true }
+                        style={ [{
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 8,
+                          },
+                        { height: 80 }] }
+                        size='large'
+                        color={ '#A7A7A7' }
+                    />
+            </View>
+        )
+}
+return (
+<View style={{ backgroundColor:'black', flex:1 }} >
+
+          
+<View style={{  flex:5,
+                backgroundColor:'black',
+                maxHeight:Number(this.props.heightLayout),
+                maxWidth:Number(this.props.widthLayout),
+                marginTop:30,
+              }} >
+
+        {this.state.apiData[this.state.selectedIndex].type=='video'?
+             <View style={styles.containervideo}>
+
+                   <View>
+                       <Video
+                         source={{ uri: this.state.apiData[this.state.selectedIndex].src }}
+                         shouldPlay={this.state.shouldPlay}
+                         resizeMode="cover"
+                         style={{ width:380, height: 300 }}
+                         isMuted={this.state.mute}
+                       />
+                       <View style={styles.controlBar}>
+                         <MaterialIcons
+                           name={this.state.mute ? "volume-mute" : "volume-up"}
+                           size={45}
+                           color="white"
+                           onPress={this.handleVolume}
+                         />
+                         <MaterialIcons
+                           name={this.state.shouldPlay ? "pause" : "play-arrow"}
+                           size={45}
+                           color="white"
+                           onPress={this.handlePlayAndPause}
+                         />
+                       </View>
+                     </View>
+                 </View>
+
+             :
+
+            this.state.apiData[this.state.selectedIndex].type=='image' &&
+             ( (this.state.apiData[this.state.selectedIndex].horizontal==='best_adjust' && this.props.orientationStatus==='Landscape') ||
+              (this.state.apiData[this.state.selectedIndex].vertical==='best_adjust' && this.props.orientationStatus==='Portrait' ))
+            ?
+
+            <View style = {this.getcontainerStyles()}>
+                         <ScalableImage
+                             height={Dimensions.get('window').height}
+                             width={Dimensions.get('window').width}
+                             source={{uri: this.state.apiData[this.state.selectedIndex].src}} />
+          </View> :
+          <View style = {this.getcontainerStyles()}>
+              <Image
+                  style = {this.getImageStyles()}
+                  source={{uri: this.state.apiData[this.state.selectedIndex].src}} />
+            </View>
+        }
+
+        <View style={styles.buttonContainer}>
+
+              <TouchableHighlight onPress={ this.handleLikeButtonClick.bind(this)} underlayColor="white">
+                <View style={styles.likeButton}>
+                  <Text style={styles.likeButtonText}>Like</Text>
+                </View>
+              </TouchableHighlight>
+
+              <QRCode
+              value={this.state.apiData[this.state.selectedIndex].url}
+              size={100}
+              bgColor='white'
+              fgColor='black'/>
+
+        </View >
+</View>
+
+          <View style={styles.footerContainer} >
+            <Text> {this.state.displayTime}  </Text>
+          </View>
+
+</View>
+    );
+  }
+}
+
+const styles = StyleSheet.create({
+  containervideo: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controlBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 45,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },buttonContainer: {
+    margin:20,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+  },likebuttonContainer: {
+    margin:20,
+    marginBottom:0,
+  },likeButton: {
+    margin:20,
+    marginBottom:0,
+    width: 70,
+    alignItems: 'center',
+    backgroundColor: 'white'
+  },
+  likeButtonText: {
+    padding: 12,
+    color: 'black'
+  },footerContainer:{
+    minHeight:40,
+    flexDirection: 'row',
+
+    alignItems: 'center',
+    backgroundColor: "#e0ffff",
+    padding:10,
+  }
+
+
+});
+//working...... 

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "sdkVersion": "25.0.0",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "exp.host.Sell2Cell",
+      "buildNumber": "8"
+    },
+    "android": {
+      "package": "exp.host.Sell2Cell"
+    }
+  }
+}
