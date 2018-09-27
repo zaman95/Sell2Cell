@@ -7,7 +7,7 @@ import {color, font, apiURLs} from '../../components/Constant';
 import {bindActionCreators} from 'redux';
 import { connect } from 'react-redux';
 import * as Actions from '../../actions'; //Import your actions
-// import ModalSelector from 'react-native-modal-selector'
+import ModalSelector from 'react-native-modal-selector'
 
 class ContactScreen extends Component {
     constructor(props) {
@@ -25,7 +25,8 @@ class ContactScreen extends Component {
     submitFeedback() {
         if (
           this.state.userName &&
-          this.state.desc
+          this.state.desc &&
+          this.state.commentType
         ) {
           this.setState({ isLoading: true })
           // setTimeout(() => {
@@ -34,6 +35,11 @@ class ContactScreen extends Component {
           //   // Alert.alert('🎸', 'You rock')
           //   this.props.navigation.navigate('welcomeScreen');
           // }, 1500)
+          this.setState({
+            commentType:null,
+            userName: null,
+            desc: null
+          });
           Alert.alert('Success', `${this.state.commentType} submitted`)
         } else {
             Alert.alert('Error', `some Fields missing`)
@@ -43,8 +49,8 @@ class ContactScreen extends Component {
   render() {
     const SCREEN_WIDTH = Dimensions.get('window').width;
     const SCREEN_HEIGHT = Dimensions.get('window').height;
-    const industryData = [
-        { key: 0, section: true, label: 'Select Industry' },
+    const feedbackType = [
+        { key: 0, section: true, label: 'Select Type' },
         { key: 'feedback', label: 'feedback' },
         { key: 'complaint', label: 'complaint' },
     ];
@@ -93,18 +99,32 @@ class ContactScreen extends Component {
                         />
                         </View>
 
-                        <View style={styles.inputContainer}>
-                            <Picker
+                        <View style={[styles.inputContainer, {height:50, width:'100%', } ]}>
+                            {/* <Picker
                                 selectedValue={this.state.commentType}
+                                mode="dropdown"
                                 style={{ flex: 1,
                                     height:50,
                                     marginLeft: 10,
-                                    color: color.black
                                     }}
                                 onValueChange={(itemValue, itemIndex) => this.setState({commentType: itemValue})}>
                                 <Picker.Item label="feedback" value="feedback" />
                                 <Picker.Item label="complaint" value="complaint" />
-                            </Picker>
+                            </Picker> */}
+                            <ModalSelector
+                                data={feedbackType}
+                                cancelButtonAccessibilityLabel={'Cancel Button'}
+                                style={{ height:50, width:'100%', }}
+                                onChange={(option)=>{ this.setState({commentType:option.label})}}>
+
+                                <TextInput
+                                    style={{marginHorizontal:10, height:50, textAlignVertical:'center', fontSize:16, fontFamily:'QuicksandRegular' }}
+                                    editable={false}
+                                    placeholder="Select Comment Type"
+                                    value={this.state.commentType} />
+
+                            </ModalSelector>
+
                         </View>
 
                     <TouchableOpacity

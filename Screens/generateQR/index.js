@@ -1,6 +1,6 @@
 
 import React, { PureComponent } from 'react'
-import { View, StyleSheet, Button, CameraRoll, Alert } from 'react-native'
+import { View, StyleSheet, Button, CameraRoll, Alert, ScrollView, Dimensions } from 'react-native'
 import { TextField } from 'react-native-material-textfield'
 import Container from 'nanokit-container'
 import { takeSnapshotAsync } from 'expo'
@@ -19,9 +19,15 @@ class GenerateQRScreen extends PureComponent {
 
     render() {
         const { value, isFocused, savedCode } = this.state
+        const SCREEN_WIDTH = Dimensions.get('window').width;
 
         return (
-            <Container backgroundColor="white" padding={10}>
+            // <Container backgroundColor="white" padding={10}>
+            <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  style={{ flexDirection: 'column', padding:0, margin:0, width:SCREEN_WIDTH, }}
+                  contentContainerStyle={{ alignItems:'center' }}>
+
                 <TextField
                     ref={this.setRef}
                     onFocus={this.handleOnFocus}
@@ -35,6 +41,12 @@ class GenerateQRScreen extends PureComponent {
                     textColor={colors.primary}
                     tintColor={colors.secondary}
                     containerStyle={styles.inputContainer}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    // returnKeyType="go"
+                    onSubmitEditing={() => {
+                        this.handleGenerate()
+                    }}
                 />
                 <View
                     style={styles.qrContainer}
@@ -52,7 +64,8 @@ class GenerateQRScreen extends PureComponent {
                         />
                     )}
                 </View>
-            </Container>
+            </ScrollView>    
+            // </Container>
         )
     }
 
@@ -98,7 +111,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 100
+        margin:20
     }
 })
 

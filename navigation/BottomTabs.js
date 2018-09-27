@@ -16,28 +16,39 @@ import {color, font, apiURLs} from '../components/Constant';
 const generateQRStack = createStackNavigator({
   generateQRScreen: { screen: GenerateQRScreen },
 }, {
-   headerMode: 'none',
+   // headerMode: 'none',
+   navigationOptions: { title: 'Generate QR' },
    initialRouteName: 'generateQRScreen',
 })
 
 const contactStack = createStackNavigator({
   contactScreen: { screen: ContactScreen },
 }, {
-   headerMode: 'none',
+   // headerMode: 'none',
+   navigationOptions: { title: 'Contact Us' },
    initialRouteName: 'contactScreen',
 })
 
 const scanQRStack = createStackNavigator({
   scanQRScreen: { screen: ScanQRScreen },
 }, {
-   headerMode: 'none',
+   // headerMode: 'none',
+   navigationOptions: { title: 'Scan QR' },
    initialRouteName: 'scanQRScreen',
 })
 const ProfileStack = createStackNavigator({
   profileScreen: { screen: ProfileScreen },
+  // navigationOptions: { title: 'Profile' }
 }, {
-   headerMode: 'none',
-   initialRouteName: 'profileScreen',
+   // headerMode: 'none',
+  navigationOptions: { 
+     title: 'Profile Settings',
+    //  headerTitleStyle: {
+    //   fontFamily:'QuicksandBold', fontSize: 15,
+    // },
+  },
+  initialRouteName: 'profileScreen',
+
 })
 
 export default createBottomTabNavigator(
